@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Revolt AI Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            width: 400px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: #222;
+            color: white;
+            padding: 10px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        .msg {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 12px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .user {
+            background: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+
+        .bot {
+            background: #e4e6eb;
+            color: black;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .chat-input button {
+            margin-left: 5px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .send-btn {
+            background: #007bff;
+            color: white;
+        }
+
+        .mic-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .stop-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .clear-btn {
+            background: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="chat-header">⚡ Revolt AI Chatbot</div>
+        <div id="chat" class="chat-box"></div>
+        <div class="chat-input">
+            <input type="text" id="message" placeholder="Type your message..." />
+            <button class="send-btn" onclick="sendMessage()">Send</button>
+            <button class="mic-btn" onclick="startListening()">🎤</button>
+        </div>
+        <div class="chat-input">
+            <button class="stop-btn" onclick="stopSpeaking()">⏹ Stop</button>
+            <button class="clear-btn" onclick="clearChat()">🗑 Clear</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUtterance = null;
+
+        // Send user message
+        async function sendMessage(textOverride) {
+            const input = document.getElementById("message");
+            const chat = document.getElementById("chat");
+            const userMsg = textOverride || input.value;
+
+            if (!userMsg) return;
+
+            // Show user bubble
+            addMessage(userMsg, "user");
+
+            // Send to backend
+            const res = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userMsg })
+            });
+
+            const data = await res.json();
+            const botReply = data.reply;
+
+            // Show bot bubble
+            addMessage(botReply, "bot");
+
+            // Bot speaks
+            speak(botReply);
+
+            input.value = "";
+        }
+
+        // Add message to chat
+        function addMessage(text, sender) {
+            const chat = document.getElementById("chat");
+            const msgDiv = document.createElement("div");
+            msgDiv.classList.add("msg", sender);
+            msgDiv.innerHTML = text;
+            chat.appendChild(msgDiv);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        // 🎤 Voice input (Speech-to-Text)
+        function startListening() {
+            if (speechSynthesis.speaking) speechSynthesis.cancel(); // stop bot if talking
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = "en-US";
+            recognition.start();
+            recognition.onresult = function (event) {
+                const speechText = event.results[0][0].transcript;
+                sendMessage(speechText);
+            };
+            recognition.onerror = (event) => console.error("Speech error:", event.error);
+        }
+
+        // 🔊 Bot speaks (Text-to-Speech)
+        function speak(text) {
+            if (speechSynthesis.speaking) speechSynthesis.cancel();
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            currentUtterance.lang = "en-US"; // change to hi-IN for Hindi voice
+            speechSynthesis.speak(currentUtterance);
+        }
+
+        // ⏹ Stop bot speaking
+        function stopSpeaking() {
+            if (speechSynthesis.speaking) speechSynthesis.cancel();
+        }
+
+        // 🗑 Clear chat
+        function clearChat() {
+            document.getElementById("chat").innerHTML = "";
+            stopSpeaking();
+        }
+    </script>
+</body>
+
+</html>
