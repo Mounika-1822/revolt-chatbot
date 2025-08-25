@@ -32,8 +32,11 @@ app.post("/chat", async (req, res) => {
         );
 
         const data = await response.json();
+        console.log("🔹 Gemini raw response:", JSON.stringify(data, null, 2)); // Debug log
+
         const botReply =
             data.candidates?.[0]?.content?.parts?.[0]?.text ||
+            data.error?.message || // If API returns error
             "Sorry, I couldn’t understand.";
 
         res.json({ reply: botReply });
